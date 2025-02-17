@@ -1,7 +1,7 @@
 from multiprocessing import Process
-from dns_server import start_dns_server
-from dashboard import start_dashboard
-from database import init_db
+from .dns_server import start_dns_server
+from .dashboard import start_dashboard
+from .database import init_db
 
 if __name__ == "__main__":
     init_db()  # Initialize database
