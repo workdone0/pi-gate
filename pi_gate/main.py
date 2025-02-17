@@ -3,7 +3,7 @@ from .dns_server import start_dns_server
 from .dashboard import start_dashboard
 from .database import init_db
 
-if __name__ == "__main__":
+def main():
     init_db()  # Initialize database
 
     dns_process = Process(target=start_dns_server)
@@ -14,3 +14,6 @@ if __name__ == "__main__":
 
     dns_process.join()
     dash_process.join()
+
+if __name__ == "__main__":
+    main()
