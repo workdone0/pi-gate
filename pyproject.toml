@@ -11,6 +11,8 @@ dependencies = [
     "dash (>=2.18.2,<3.0.0)",
     "dnslib (>=0.9.25,<0.10.0)",
     "pandas (>=2.2.3,<3.0.0)",
+    "asyncio (>=3.4.3,<4.0.0)",
+    "aiohttp (>=3.11.12,<4.0.0)",
 ]
 packages = [{ include = "pi_gate" }]
 [build-system]
