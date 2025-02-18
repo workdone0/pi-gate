@@ -14,8 +14,8 @@ def start_services():
     """Start DNS server and dashboard in separate processes"""
     init_db()
 
-    dns_process = Process(target=start_dns, daemon=True)
-    dash_process = Process(target=start_dashboard, daemon=True)
+    dns_process = Process(target=start_dns, daemon=False)
+    dash_process = Process(target=start_dashboard, daemon=False)
 
     dns_process.start()
     dash_process.start()
