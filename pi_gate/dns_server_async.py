@@ -38,6 +38,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
+
 # -------------------------------
 # Blocklist Loading Functions
 # -------------------------------
@@ -64,6 +65,7 @@ async def load_blocklist(url):
         logging.error(f"Error loading blocklist from {url}: {e}")
     return blocked
 
+
 async def load_all_blocklists():
     global BLOCKED_DOMAINS
     tasks = [load_blocklist(url) for url in BLOCKLIST_URLS]
@@ -71,6 +73,7 @@ async def load_all_blocklists():
     for result in results:
         BLOCKED_DOMAINS.update(result)
     logging.info(f"Loaded {len(BLOCKED_DOMAINS)} blocked domains.")
+
 
 # -------------------------------
 # Helper Functions
@@ -82,6 +85,7 @@ def is_blocked(query_name):
         if qn == blocked or qn.endswith("." + blocked):
             return True
     return False
+
 
 # -------------------------------
 # Asynchronous Upstream Query
@@ -109,6 +113,7 @@ class DnsClientProtocol(asyncio.DatagramProtocol):
         if not self.on_response.done():
             self.on_response.set_exception(exc or Exception("Connection lost"))
 
+
 async def forward_query(data):
     loop = asyncio.get_running_loop()
     try:
@@ -127,6 +132,7 @@ async def forward_query(data):
     except Exception as e:
         logging.error(f"Error forwarding query: {e}")
         return None
+
 
 # -------------------------------
 # Asyncio DNS Server Protocol
@@ -171,6 +177,7 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
             self.transport.sendto(response_data, addr)
         except Exception as e:
             logging.error(f"Error handling DNS query: {e}")
+
 
 # -------------------------------
 # Main Entry Point
