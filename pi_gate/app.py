@@ -12,11 +12,7 @@ def start():
         print("pi-gate is already running!")
         raise typer.Exit(1)
 
-    dns_pid, dash_pid = start_services()
-
-    with open(PID_FILE, "w") as f:
-        f.write(f"{dns_pid}\n{dash_pid}")
-
+    start_services()
     print("pi-gate started successfully.")
 
 @app.command()
