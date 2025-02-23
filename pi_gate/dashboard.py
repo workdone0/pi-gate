@@ -35,4 +35,3 @@ def update_table(n):
 def start_dashboard():
     logging.info("Starting dashboard...")
     app.run_server(debug=False, host="0.0.0.0", port=8050)
-    logging.info("Dashboard stopped.")
