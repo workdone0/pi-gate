@@ -3,17 +3,18 @@ import asyncio
 import aiohttp
 import logging
 from dnslib import DNSRecord, DNSHeader, RR, A, QTYPE
+from .database import log_query
 
 # -------------------------------
 # Configuration Section
 # -------------------------------
 
 # Pre-existing blocklist URLs for ads.
-BLOCKLIST_URLS = [
-    "https://raw.githubusercontent.com/AdAway/adaway.github.io/master/hosts.txt",
-    "http://sbc.io/hosts/hosts"
-]
-
+# BLOCKLIST_URLS = [
+#     "https://raw.githubusercontent.com/AdAway/adaway.github.io/master/hosts.txt",
+#     "http://sbc.io/hosts/hosts"
+# ]
+BLOCKLIST_URLS = []
 # The sinkhole IP to return for blocked domains.
 SINKHOLE_IP = "0.0.0.0"
 
@@ -164,6 +165,7 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
                 )
                 response_data = reply.pack()
                 logging.info(f"Blocked domain {qname}. Returning sinkhole IP {SINKHOLE_IP}.")
+                log_query(client_ip=client_ip, domain=str(qname), blocked=1)
             else:
                 response_data = await forward_query(data)
                 if response_data is None:
@@ -173,6 +175,7 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
                     )
                     response_data = reply.pack()
                 logging.info(f"Forwarded domain {qname} to upstream DNS.")
+                log_query(client_ip=client_ip,domain=str(qname),blocked=0)
 
             self.transport.sendto(response_data, addr)
         except Exception as e:
