@@ -2,7 +2,7 @@
 import dash
 from dash import dcc, html
 import logging
-from pi_gate.database import fetch_logs
+from .database import fetch_logs
 
 LOG_FILE = "/tmp/pi_gate.log"
 logging.basicConfig(
