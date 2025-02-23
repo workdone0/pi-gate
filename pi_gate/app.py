@@ -1,8 +1,8 @@
-# pi_gate/pi_gate.py
 import os
 import typer
 import subprocess
 import signal
+import pathlib
 
 app = typer.Typer()
 PID_FILE = "/tmp/pi_gate.pid"
@@ -16,9 +16,12 @@ def start():
         raise typer.Exit(1)
 
     try:
+        # Get the absolute path to the pi_gate directory
+        pi_gate_dir = pathlib.Path(__file__).parent.absolute()
+
         # Start DNS server
         dns_process = subprocess.Popen(
-            ["python3", "-c", "from pi_gate.dns_server_async import start_dns_server; from pi_gate.database import init_db; init_db(); import asyncio; asyncio.run(start_dns_server())"],
+            ["python3", str(pi_gate_dir / "dns_server_async.py")],
             stdout=open(LOG_FILE, "a"),
             stderr=subprocess.STDOUT,
             preexec_fn=os.setsid  # Create new session
@@ -26,7 +29,7 @@ def start():
 
         # Start dashboard
         dash_process = subprocess.Popen(
-            ["python3", "-c", "from pi_gate.dashboard import start_dashboard; from pi_gate.database import init_db; init_db(); start_dashboard()"],
+            ["python3", str(pi_gate_dir / "dashboard.py")],
             stdout=open(LOG_FILE, "a"),
             stderr=subprocess.STDOUT,
             preexec_fn=os.setsid # Create new session
