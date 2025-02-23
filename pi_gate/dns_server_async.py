@@ -153,7 +153,6 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
             qname = request.q.qname
             qtype = QTYPE[request.q.qtype]
             client_ip = addr[0]
-            logging.info(f"Received query from {client_ip} for {qname} (type {qtype})")
 
             if is_blocked(qname):
                 reply = DNSRecord(
@@ -164,7 +163,6 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
                     RR(rname=qname, rtype=QTYPE.A, rclass=1, ttl=60, rdata=A(SINKHOLE_IP))
                 )
                 response_data = reply.pack()
-                logging.info(f"Blocked domain {qname}. Returning sinkhole IP {SINKHOLE_IP}.")
                 log_query(client_ip=client_ip, domain=str(qname), blocked=1)
             else:
                 response_data = await forward_query(data)
@@ -174,7 +172,6 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
                         q=request.q
                     )
                     response_data = reply.pack()
-                logging.info(f"Forwarded domain {qname} to upstream DNS.")
                 log_query(client_ip=client_ip,domain=str(qname),blocked=0)
 
             self.transport.sendto(response_data, addr)
@@ -201,3 +198,5 @@ async def start_dns_server():
         logging.info("Shutting down the DNS sinkhole server.")
     finally:
         transport.close()
+
+
