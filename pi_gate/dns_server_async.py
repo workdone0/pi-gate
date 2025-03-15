@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import asyncio
+import os
 import aiohttp
+import uvloop
 import logging
 from dnslib import DNSRecord, DNSHeader, RR, A, QTYPE
 from .database import log_query
@@ -32,13 +34,6 @@ BLOCKED_DOMAINS = set()
 # Logging Configuration
 # -------------------------------
 LOG_FILE = "/tmp/dns_sinkhole.log"
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-
 
 # -------------------------------
 # Blocklist Loading Functions
@@ -179,12 +174,40 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
             logging.error(f"Error handling DNS query: {e}")
 
 
-# -------------------------------
-# Main Entry Point
-# -------------------------------
+async def setup_logging():
+    try:
+        # Make sure the directory exists for the log file
+        log_dir = os.path.dirname(LOG_FILE)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+            
+        # Close any existing handlers (important for daemonization)
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+            
+        # Configure logging with file handler explicitly
+        file_handler = logging.FileHandler(LOG_FILE)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(formatter)
+        
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+        
+        logging.info("DNS Server starting in daemon mode")
+    except Exception as e:
+        # Write to a fallback location if there's an issue
+        with open("/tmp/dns_server_error.log", "a") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error setting up logging: {str(e)}\n")
 
 async def start_dns_server():
+    await setup_logging()
     await load_all_blocklists()
+   
+    uvloop.install()
     loop = asyncio.get_running_loop()
     listen_addr = (LISTEN_HOST, LISTEN_PORT)
     transport, protocol = await loop.create_datagram_endpoint(

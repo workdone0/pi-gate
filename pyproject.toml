@@ -14,6 +14,7 @@ dependencies = [
     "asyncio (>=3.4.3,<4.0.0)",
     "aiohttp (>=3.11.12,<4.0.0)",
     "typer (>=0.15.1,<0.16.0)",
+    "uvloop (>=0.21.0,<0.22.0)",
 ]
 packages = [{ include = "pi_gate" }]
 [build-system]
