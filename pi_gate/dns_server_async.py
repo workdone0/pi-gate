@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import aiohttp
+import uvloop
 import logging
 from dnslib import DNSRecord, DNSHeader, RR, A, QTYPE
 from .database import log_query
@@ -185,6 +186,7 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
 
 async def start_dns_server():
     await load_all_blocklists()
+    uvloop.install()
     loop = asyncio.get_running_loop()
     listen_addr = (LISTEN_HOST, LISTEN_PORT)
     transport, protocol = await loop.create_datagram_endpoint(
