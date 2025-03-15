@@ -9,6 +9,8 @@ __pycache__/
 # DB files
 *.db
 
+# Testing GH Ruleset
+
 # Distribution / packaging
 .Python
 build/
