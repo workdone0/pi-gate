@@ -46,35 +46,38 @@ class BloomFilter:
                 # Fall back to a user-accessible location if /tmp is not writable
                 self.LOG_FILE = Path(os.path.expanduser("~/pi_gate.log"))
                 print(f"Warning: Cannot write to /tmp/pi_gate.log, using {self.LOG_FILE} instead")
-                
-            # Reset existing loggers to avoid duplicate handlers
-            root = logging.getLogger()
-            if root.handlers:
-                for handler in root.handlers:
-                    root.removeHandler(handler)
-                    
-            # Configure logging
-            logging.basicConfig(
-                level=logging.INFO,
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                handlers=[
-                    logging.FileHandler(self.LOG_FILE, mode='a'),
-                    logging.StreamHandler()
-                ]
-            )
+            
+            # Create a logger specifically for this class
             self.logger = logging.getLogger('BloomFilter')
+            
+            # Clear any existing handlers to avoid duplicates
+            if self.logger.handlers:
+                self.logger.handlers.clear()
+            
+            # Set the level for this logger
             self.logger.setLevel(logging.INFO)
+            
+            # Create formatter
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            
+            # Add file handler
+            file_handler = logging.FileHandler(self.LOG_FILE, mode='a')
+            file_handler.setFormatter(formatter)
+            self.logger.addHandler(file_handler)
+            
+            # Add console handler (if you want console output)
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            self.logger.addHandler(console_handler)
+            
+            # Set propagate to False to prevent messages from propagating to the root logger
+            self.logger.propagate = False
             
             self.logger.info("BloomFilter logging initialized")
-            
         except Exception as e:
-            # Fall back to stderr if all else fails
-            print(f"Failed to set up logging: {str(e)}", file=sys.stderr)
-            self.logger = logging.getLogger('BloomFilter')
-            handler = logging.StreamHandler(sys.stderr)
-            handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
+            print(f"Error setting up logging: {e}")
+            
+
     
     def normalize_url(self, url: str) -> str:
         """
