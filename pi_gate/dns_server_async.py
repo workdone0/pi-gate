@@ -8,7 +8,7 @@ import uvloop
 import logging
 from dnslib import DNSRecord, DNSHeader, RR, A, QTYPE
 from .database import log_query
-from .filter import initialize_bloom
+from .blm_filter import initialize_bloom
 
 
 blocklist_url = "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/pro.txt"
@@ -92,7 +92,6 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
             qname = request.q.qname
             qtype = QTYPE[request.q.qtype]
             client_ip = addr[0]
-            logging.info(BLOOM)
             if BLOOM.check_url(str(qname)):
                 reply = DNSRecord(
                     DNSHeader(id=request.header.id, qr=1, aa=1, ra=1),
