@@ -10,7 +10,7 @@ from typing import Optional, List, Tuple
 from pybloom_live import BloomFilter
 from urllib.parse import urlparse
 
-class BloomFilter:
+class BlmFilter:
     """
     A class to efficiently load and check URLs using a Bloom filter.
     Designed for resource-constrained environments like Raspberry Pi.
@@ -64,11 +64,6 @@ class BloomFilter:
             file_handler = logging.FileHandler(self.LOG_FILE, mode='a')
             file_handler.setFormatter(formatter)
             self.logger.addHandler(file_handler)
-            
-            # Add console handler (if you want console output)
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            self.logger.addHandler(console_handler)
             
             # Set propagate to False to prevent messages from propagating to the root logger
             self.logger.propagate = False
@@ -266,7 +261,7 @@ class BloomFilter:
         self.logger.info(f"  False positive rate: {self.bloom_filter.error_rate}")
 
 # Example of how to use this at boot time
-def initialize_bloom(blocklist_url: str) -> Optional[BloomFilter]:
+def initialize_bloom(blocklist_url: str) -> Optional[BlmFilter]:
     """
     Initialize the URL blocker at boot time.
     
@@ -277,7 +272,7 @@ def initialize_bloom(blocklist_url: str) -> Optional[BloomFilter]:
         URLBlocker instance or None if initialization failed
     """
     try:
-        blocker = BloomFilter()
+        blocker = BlmFilter()
         blocker.setup_logging()
         # Try to load existing bloom filter first
         if blocker.load_bloom_filter():

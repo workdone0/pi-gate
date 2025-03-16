@@ -1,4 +1,3 @@
-# pi_gate/dashboard.py
 import dash
 from dash import dcc, html
 import logging
