@@ -46,9 +46,9 @@ def daemonize(func):
     # We're now in the grandchild process
     func()  # Run the actual function
 
-def start_services():
+async def start_services():
     """Start DNS server and dashboard in background"""
-    init_db()
+    await init_db()
     
     # Clear the PID file first
     with open(PID_FILE, "w") as f:

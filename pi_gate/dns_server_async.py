@@ -1,87 +1,31 @@
 #!/usr/bin/env python3
 import asyncio
 import os
+import time
+from typing import Optional
 import aiohttp
 import uvloop
 import logging
 from dnslib import DNSRecord, DNSHeader, RR, A, QTYPE
 from .database import log_query
+from .filter import initialize_bloom
 
-# -------------------------------
-# Configuration Section
-# -------------------------------
 
-# Pre-existing blocklist URLs for ads.
-# BLOCKLIST_URLS = [
-#     "https://raw.githubusercontent.com/AdAway/adaway.github.io/master/hosts.txt",
-#     "http://sbc.io/hosts/hosts"
-# ]
-BLOCKLIST_URLS = []
-# The sinkhole IP to return for blocked domains.
+blocklist_url = "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/pro.txt"
+
 SINKHOLE_IP = "0.0.0.0"
 
-# Upstream DNS server (for non-blocked queries)
 UPSTREAM_DNS = ("8.8.8.8", 53)
 
-# Listen address and port
 LISTEN_HOST = "0.0.0.0"
 LISTEN_PORT = 53
 
-# Global variable to hold the blocked domains
-BLOCKED_DOMAINS = set()
-
+# Global variable to hold the bloom filter
+BLOOM = None
 # -------------------------------
 # Logging Configuration
 # -------------------------------
 LOG_FILE = "/tmp/dns_sinkhole.log"
-
-# -------------------------------
-# Blocklist Loading Functions
-# -------------------------------
-
-async def load_blocklist(url):
-    blocked = set()
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    text = await resp.text()
-                    for line in text.splitlines():
-                        line = line.strip()
-                        if not line or line.startswith("#"):
-                            continue
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            domain = parts[1].lower()
-                            if domain not in ("localhost", "local"):
-                                blocked.add(domain)
-                else:
-                    logging.warning(f"Failed to download blocklist from {url} (HTTP {resp.status})")
-    except Exception as e:
-        logging.error(f"Error loading blocklist from {url}: {e}")
-    return blocked
-
-
-async def load_all_blocklists():
-    global BLOCKED_DOMAINS
-    tasks = [load_blocklist(url) for url in BLOCKLIST_URLS]
-    results = await asyncio.gather(*tasks)
-    for result in results:
-        BLOCKED_DOMAINS.update(result)
-    logging.info(f"Loaded {len(BLOCKED_DOMAINS)} blocked domains.")
-
-
-# -------------------------------
-# Helper Functions
-# -------------------------------
-
-def is_blocked(query_name):
-    qn = str(query_name).rstrip('.').lower()
-    for blocked in BLOCKED_DOMAINS:
-        if qn == blocked or qn.endswith("." + blocked):
-            return True
-    return False
-
 
 # -------------------------------
 # Asynchronous Upstream Query
@@ -148,8 +92,8 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
             qname = request.q.qname
             qtype = QTYPE[request.q.qtype]
             client_ip = addr[0]
-
-            if is_blocked(qname):
+            logging.info(BLOOM)
+            if BLOOM.check_url(str(qname)):
                 reply = DNSRecord(
                     DNSHeader(id=request.header.id, qr=1, aa=1, ra=1),
                     q=request.q
@@ -158,16 +102,18 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
                     RR(rname=qname, rtype=QTYPE.A, rclass=1, ttl=60, rdata=A(SINKHOLE_IP))
                 )
                 response_data = reply.pack()
-                log_query(client_ip=client_ip, domain=str(qname), blocked=1)
+                await log_query(client_ip=client_ip, domain=str(qname), blocked=1, success=1)
             else:
                 response_data = await forward_query(data)
+                success=1
                 if response_data is None:
+                    success=0
                     reply = DNSRecord(
                         DNSHeader(id=request.header.id, qr=1, ra=1, rcode=2),
                         q=request.q
                     )
                     response_data = reply.pack()
-                log_query(client_ip=client_ip,domain=str(qname),blocked=0)
+                await log_query(client_ip=client_ip,domain=str(qname),blocked=0, success=success)
 
             self.transport.sendto(response_data, addr)
         except Exception as e:
@@ -203,10 +149,11 @@ async def setup_logging():
         with open("/tmp/dns_server_error.log", "a") as f:
             f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error setting up logging: {str(e)}\n")
 
+
 async def start_dns_server():
     await setup_logging()
-    await load_all_blocklists()
-   
+    global BLOOM
+    BLOOM = initialize_bloom(blocklist_url)
     uvloop.install()
     loop = asyncio.get_running_loop()
     listen_addr = (LISTEN_HOST, LISTEN_PORT)
