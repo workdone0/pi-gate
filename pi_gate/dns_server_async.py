@@ -8,7 +8,7 @@ import uvloop
 import logging
 from dnslib import DNSRecord, DNSHeader, RR, A, QTYPE
 from .database import log_query
-from .filter import URLBlocker
+from .filter import initialize_bloom
 
 
 blocklist_url = "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/pro.txt"
@@ -92,8 +92,8 @@ class DnsServerProtocol(asyncio.DatagramProtocol):
             qname = request.q.qname
             qtype = QTYPE[request.q.qtype]
             client_ip = addr[0]
-
-            if BLOOM.check_url(qname):
+            logging.info(BLOOM)
+            if BLOOM.check_url(str(qname)):
                 reply = DNSRecord(
                     DNSHeader(id=request.header.id, qr=1, aa=1, ra=1),
                     q=request.q
@@ -149,33 +149,6 @@ async def setup_logging():
         with open("/tmp/dns_server_error.log", "a") as f:
             f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error setting up logging: {str(e)}\n")
 
-def initialize_bloom(blocklist_url: str) -> Optional[URLBlocker]:
-    """
-    Initialize the URL blocker at boot time.
-    
-    Args:
-        blocklist_url: URL to download the blocklist from
-        
-    Returns:
-        URLBlocker instance or None if initialization failed
-    """
-    try:
-        blocker = URLBlocker()
-        
-        # Try to load existing bloom filter first
-        if blocker.load_bloom_filter():
-            return blocker
-        
-        # If loading failed, download and create a new one
-        success, message = blocker.load_urls_from_url(blocklist_url)
-        if success:
-            return blocker
-        else:
-            logging.error(f"Failed to initialize URL blocker: {message}")
-            return None
-    except Exception as e:
-        logging.error(f"Unexpected error initializing URL blocker: {str(e)}")
-        return None
 
 async def start_dns_server():
     await setup_logging()
