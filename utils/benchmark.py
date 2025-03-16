@@ -261,20 +261,20 @@ if __name__ == "__main__":
 
 """
 # Basic usage with 100 domains (40 real, 60 random)
-python dns_benchmark.py
+python benchmark.py
 
 # Test with 500 domains
-python dns_benchmark.py --requests 500
+python benchmark.py --requests 500
 
 # Use 80% real domains, 20% random
-python dns_benchmark.py --real-ratio 0.8
+python benchmark.py --real-ratio 0.8
 
 # Use your own domain list
-python dns_benchmark.py --domain-file my_domains.txt
+python benchmark.py --domain-file my_domains.txt
 
 # Save results to CSV for further analysis
-python dns_benchmark.py --save-csv
+python benchmark.py --save-csv
 
 # High concurrency test
-python dns_benchmark.py --concurrent --workers 40
+python benchmark.py --concurrent --workers 40
 """

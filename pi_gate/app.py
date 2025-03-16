@@ -1,6 +1,7 @@
 
 import os
 import typer
+import asyncio
 from .main import start_services, stop_services
 
 app = typer.Typer()
@@ -13,7 +14,7 @@ def start():
         print("pi-gate is already running!")
         raise typer.Exit(1)
 
-    start_services()
+    asyncio.run(start_services())
     print("pi-gate started successfully.")
 
 @app.command()

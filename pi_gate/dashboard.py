@@ -2,6 +2,7 @@
 import dash
 from dash import dcc, html
 import logging
+import asyncio
 from .database import fetch_logs
 
 LOG_FILE = "/tmp/pi_gate.log"
@@ -26,7 +27,7 @@ app.layout = html.Div([
 )
 def update_table(n):
     try:
-        logs = fetch_logs()
+        logs = asyncio.run(fetch_logs())
         return [html.P(f"{log}") for log in logs]
     except Exception as e:
         logging.error(f"Error updating table: {e}")
