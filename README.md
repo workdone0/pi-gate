@@ -9,10 +9,13 @@
 ### ✅ Current Features
 - **DNS Sinkhole Functionality**: Blocks unwanted domains by intercepting DNS queries.
 - **Lightweight & Fast**: Designed to run efficiently on minimal hardware.
-- **Logging System**: Logs DNS queries to track blocked and allowed domains.
+- **Centralized Configuration**: Environment-based configuration with sensible defaults.
+- **Enhanced Logging System**: Consistent logging across all components with configurable levels.
 - **Configurable Blocklists**: Supports loading custom blocklists for domain filtering.
-- **Command-Line Interface (CLI)**: `pi-gate start` and `pi-gate stop` commands for easy control.
+- **Command-Line Interface (CLI)**: `pi-gate start`, `stop`, `status`, and `update-blocklist` commands.
 - **Background Execution**: Runs as a background service using Poetry.
+- **Modern Dashboard**: Real-time statistics, filtering, and sorting of DNS queries.
+- **Cross-Platform Support**: Uses tempfile and home directory fallbacks for better portability.
 
 ### 🚀 Upcoming Features
 - **Optimized AsyncIO Handling**: Improve efficiency in DNS request processing.
@@ -46,7 +49,7 @@ A DNS sinkhole intercepts DNS queries and returns a null response (or a specific
 ## Installation & Usage
 
 ### 📥 Prerequisites
-- Python 3.8+
+- Python 3.11+
 - Poetry (for dependency management)
 
 ### 🔧 Installation
@@ -59,6 +62,26 @@ cd pi-gate
 poetry install
 ```
 
+### ⚙️ Configuration (Optional)
+pi-gate can be configured using environment variables. Copy the example config and modify as needed:
+
+```bash
+# Copy the example configuration
+cp config.example.env .env
+
+# Edit the configuration
+nano .env
+```
+
+Available configuration options:
+- `PI_GATE_DNS_HOST`: DNS server listen address (default: 0.0.0.0)
+- `PI_GATE_DNS_PORT`: DNS server port (default: 53)
+- `PI_GATE_DASHBOARD_HOST`: Dashboard listen address (default: 0.0.0.0)
+- `PI_GATE_DASHBOARD_PORT`: Dashboard port (default: 8050)
+- `PI_GATE_UPSTREAM_DNS`: Upstream DNS server (default: 8.8.8.8:53)
+- `PI_GATE_BLOCKLIST_URL`: Blocklist URL (default: hagezi/pro.txt)
+- `PI_GATE_LOG_LEVEL`: Logging level (default: INFO)
+
 ### ▶️ Running pi-gate
 ```bash
 # Start the DNS sinkhole
@@ -66,7 +89,23 @@ poetry run pi-gate start
 
 # Stop the service
 poetry run pi-gate stop
+
+# Check status
+poetry run pi-gate status
+
+# Update blocklist
+poetry run pi-gate update-blocklist
+
+# Update blocklist from custom URL
+poetry run pi-gate update-blocklist --url https://example.com/blocklist.txt
 ```
+
+### 📊 Dashboard
+Access the dashboard at `http://localhost:8050` to view:
+- Real-time DNS query statistics
+- Recent DNS queries with filtering and sorting
+- Blocked vs allowed query counts
+- Success rate metrics
 
 ---
 
