@@ -3,21 +3,14 @@ import logging
 import pandas as pd
 import asyncio
 from typing import List, Dict, Any, Optional
+from .config import config, setup_logging
 
-LOG_FILE = "/tmp/pi_gate.log"
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-
-DATABASE_FILE = "dns_logs.db"
+logger = setup_logging(config, "pi_gate.database")
 
 async def init_db() -> None:
     """Initialize the database and create tables if they don't exist."""
     try:
-        async with aiosqlite.connect(DATABASE_FILE) as db:
+        async with aiosqlite.connect(config.database_file) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS dns_requests (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,8 +22,9 @@ async def init_db() -> None:
                 )
             """)
             await db.commit()
+            logger.info(f"Database initialized: {config.database_file}")
     except aiosqlite.Error as e:
-        logging.error(f"Error initializing database: {e}")
+        logger.error(f"Error initializing database: {e}")
         raise
 
 async def log_query(client_ip: str, domain: str, blocked: int, success: int) -> None:
@@ -43,14 +37,14 @@ async def log_query(client_ip: str, domain: str, blocked: int, success: int) -> 
         success: 1 if resolved successfully, 0 if failed
     """
     try:
-        async with aiosqlite.connect(DATABASE_FILE) as db:
+        async with aiosqlite.connect(config.database_file) as db:
             await db.execute(
                 "INSERT INTO dns_requests (client_ip, domain, blocked, success) VALUES (?, ?, ?, ?)",
                 (client_ip, domain, blocked, success)
             )
             await db.commit()
     except aiosqlite.Error as e:
-        logging.error(f"Error logging query: {e}")
+        logger.error(f"Error logging query: {e}")
         raise
 
 async def fetch_logs(limit: Optional[int] = None, 
@@ -99,7 +93,7 @@ async def fetch_logs(limit: Optional[int] = None,
             return result
             
     except aiosqlite.Error as e:
-        logging.error(f"Error fetching logs: {e}")
+        logger.error(f"Error fetching logs: {e}")
         return []
 
 # Helper function for pandas DataFrame conversion (runs in a separate thread)
@@ -110,5 +104,5 @@ async def get_logs_dataframe() -> pd.DataFrame:
         # Run DataFrame conversion in a thread pool to avoid blocking
         return await asyncio.to_thread(pd.DataFrame, logs)
     except Exception as e:
-        logging.error(f"Error converting logs to DataFrame: {e}")
+        logger.error(f"Error converting logs to DataFrame: {e}")
         return pd.DataFrame()

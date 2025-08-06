@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 from pybloom_live import BloomFilter
 from urllib.parse import urlparse
+from .config import config, setup_logging
 
 class BlmFilter:
     """
@@ -16,10 +17,7 @@ class BlmFilter:
     Designed for resource-constrained environments like Raspberry Pi.
     """
     
-    BLOOM_FILTER_PATH = Path("/tmp/bloom_filter.pkl")
-    LOG_FILE = Path("/tmp/bloom.log")
-    
-    def __init__(self, expected_entries: int = 600000, error_rate: float = 0.001):
+    def __init__(self, expected_entries: int = None, error_rate: float = None):
         """
         Initialize the URL blocker with bloom filter parameters.
         
@@ -27,50 +25,16 @@ class BlmFilter:
             expected_entries: The expected number of URLs to be loaded
             error_rate: Acceptable false positive rate (0.001 = 0.1%)
         """
-        self.expected_entries = expected_entries
-        self.error_rate = error_rate
+        self.expected_entries = expected_entries or config.bloom_expected_entries
+        self.error_rate = error_rate or config.bloom_error_rate
         self.bloom_filter = None
-        self.setup_logging()
+        self.logger = setup_logging(config, "pi_gate.bloom_filter")
         
     def setup_logging(self) -> None:
         """Configure logging to file and console."""
-        try:
-            # Ensure the log directory exists
-            os.makedirs(os.path.dirname(self.LOG_FILE), exist_ok=True)
-            
-            # Check if we can write to the log file
-            try:
-                with open(self.LOG_FILE, 'a') as f:
-                    pass
-            except PermissionError:
-                # Fall back to a user-accessible location if /tmp is not writable
-                self.LOG_FILE = Path(os.path.expanduser("~/pi_gate.log"))
-                print(f"Warning: Cannot write to /tmp/pi_gate.log, using {self.LOG_FILE} instead")
-            
-            # Create a logger specifically for this class
-            self.logger = logging.getLogger('BloomFilter')
-            
-            # Clear any existing handlers to avoid duplicates
-            if self.logger.handlers:
-                self.logger.handlers.clear()
-            
-            # Set the level for this logger
-            self.logger.setLevel(logging.INFO)
-            
-            # Create formatter
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            
-            # Add file handler
-            file_handler = logging.FileHandler(self.LOG_FILE, mode='a')
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
-            
-            # Set propagate to False to prevent messages from propagating to the root logger
-            self.logger.propagate = False
-            
-            self.logger.info("BloomFilter logging initialized")
-        except Exception as e:
-            print(f"Error setting up logging: {e}")
+        # This method is now deprecated since we use centralized logging
+        # Kept for backward compatibility
+        pass
             
 
     
@@ -179,9 +143,9 @@ class BlmFilter:
     def _save_bloom_filter(self) -> bool:
         """Save the bloom filter to disk."""
         try:
-            with open(self.BLOOM_FILTER_PATH, 'wb') as f:
+            with open(config.bloom_filter_file, 'wb') as f:
                 pickle.dump(self.bloom_filter, f)
-            self.logger.info(f"Saved bloom filter to {self.BLOOM_FILTER_PATH}")
+            self.logger.info(f"Saved bloom filter to {config.bloom_filter_file}")
             return True
         except Exception as e:
             self.logger.error(f"Failed to save bloom filter: {str(e)}")
@@ -190,10 +154,10 @@ class BlmFilter:
     def load_bloom_filter(self) -> bool:
         """Load the bloom filter from disk if available."""
         try:
-            if self.BLOOM_FILTER_PATH.exists():
-                with open(self.BLOOM_FILTER_PATH, 'rb') as f:
+            if config.bloom_filter_file.exists():
+                with open(config.bloom_filter_file, 'rb') as f:
                     self.bloom_filter = pickle.load(f)
-                self.logger.info(f"Loaded bloom filter from {self.BLOOM_FILTER_PATH}")
+                self.logger.info(f"Loaded bloom filter from {config.bloom_filter_file}")
                 self.logger.info(f"Bloom filter contains ~{len(self.bloom_filter)} URLs")
                 return True
             else:
@@ -261,32 +225,34 @@ class BlmFilter:
         self.logger.info(f"  False positive rate: {self.bloom_filter.error_rate}")
 
 # Example of how to use this at boot time
-def initialize_bloom(blocklist_url: str) -> Optional[BlmFilter]:
+def initialize_bloom(blocklist_url: str = None) -> Optional[BlmFilter]:
     """
     Initialize the URL blocker at boot time.
     
     Args:
-        blocklist_url: URL to download the blocklist from
+        blocklist_url: URL to download the blocklist from (uses config default if None)
         
     Returns:
         URLBlocker instance or None if initialization failed
     """
     try:
         blocker = BlmFilter()
-        blocker.setup_logging()
         # Try to load existing bloom filter first
         if blocker.load_bloom_filter():
             return blocker
         
         # If loading failed, download and create a new one
-        success, message = blocker.load_urls_from_url(blocklist_url)
+        url = blocklist_url or config.default_blocklist_url
+        success, message = blocker.load_urls_from_url(url)
         if success:
             return blocker
         else:
-            logging.error(f"Failed to initialize URL blocker: {message}")
+            blocker.logger.error(f"Failed to initialize URL blocker: {message}")
             return None
     except Exception as e:
-        logging.error(f"Unexpected error initializing URL blocker: {str(e)}")
+        # Use a temporary logger since the blocker might not be initialized
+        temp_logger = setup_logging(config, "pi_gate.bloom_init")
+        temp_logger.error(f"Unexpected error initializing URL blocker: {str(e)}")
         return None
 
 
